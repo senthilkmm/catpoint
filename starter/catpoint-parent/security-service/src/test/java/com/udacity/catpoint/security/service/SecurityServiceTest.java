@@ -122,12 +122,12 @@ class SecurityServiceTest {
         // re-activate door sensor
         securityService.changeSensorActivationStatus(doorSensor, true);
 
-        // get alarm status to be called twice
-        verify(securityRepository, times(2)).getAlarmStatus();
-        // get arming status to be called once
-        verify(securityRepository, times(1)).getArmingStatus();
-        // alarm status to be set to alarm
-        verify(securityRepository, times(1)).setAlarmStatus(AlarmStatus.ALARM);
+        // get alarm status to be called once
+        verify(securityRepository, times(1)).getAlarmStatus();
+        // get arming status should not be called
+        verify(securityRepository, never()).getArmingStatus();
+        // alarm status should not be affected
+        verify(securityRepository, never()).setAlarmStatus(AlarmStatus.ALARM);
     }
 
 //    6. If a sensor is deactivated while already inactive, make no changes to the alarm state.
@@ -142,6 +142,8 @@ class SecurityServiceTest {
 
         // get alarm status should be called once
         verify(securityRepository, times(1)).getAlarmStatus();
+        // get arming status should not be called
+        verify(securityRepository, never()).getArmingStatus();
         // alarm status should never change
         verify(securityRepository, never()).setAlarmStatus(any(AlarmStatus.class));
     }
@@ -296,7 +298,7 @@ class SecurityServiceTest {
     }
 
     @Test
-    public void setArmedAway_catDetected_setToAlarm() {
+    public void setArmedAway_catDetected_alarmNotAffected() {
         // current arming status: disarmed, camera shows cat
         when(securityRepository.getArmingStatus()).thenReturn(ArmingStatus.DISARMED);
         when(imageService.imageContainsCat(any(BufferedImage.class), anyFloat())).thenReturn(true);
@@ -309,5 +311,21 @@ class SecurityServiceTest {
         verify(securityRepository, times(1)).setArmingStatus(ArmingStatus.ARMED_AWAY);
         // alarm state should not change
         verify(securityRepository, never()).setAlarmStatus(AlarmStatus.ALARM);
+    }
+
+    @Test
+    public void setArmedHomeFromAway_catDetected_setToAlarm() {
+        // current arming status: armed away, camera shows cat
+        when(securityRepository.getArmingStatus()).thenReturn(ArmingStatus.ARMED_AWAY);
+        when(imageService.imageContainsCat(any(BufferedImage.class), anyFloat())).thenReturn(true);
+        securityService.processImage(bufferedImage);
+
+        // set arming status to armed home
+        securityService.setArmingStatus(ArmingStatus.ARMED_HOME);
+
+        // arming status to be set to armed home
+        verify(securityRepository, times(1)).setArmingStatus(ArmingStatus.ARMED_HOME);
+        // to be set to alarm state
+        verify(securityRepository, times(1)).setAlarmStatus(AlarmStatus.ALARM);
     }
 }

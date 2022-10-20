@@ -49,6 +49,12 @@ public class SecurityService {
             // set to alarm if armed home and cat found
             if (armingStatus == ArmingStatus.ARMED_HOME && cat)
                 setAlarmStatus(AlarmStatus.ALARM);
+        } else if (securityRepository.getArmingStatus() == ArmingStatus.ARMED_AWAY) {
+            // already armed, no need to deactivate sensors
+            securityRepository.setArmingStatus(armingStatus);
+            // set to alarm if armed home and cat found
+            if (armingStatus == ArmingStatus.ARMED_HOME && cat)
+                setAlarmStatus(AlarmStatus.ALARM);
         }
     }
 
@@ -109,6 +115,9 @@ public class SecurityService {
      * Internal method for updating the alarm status when a sensor has been deactivated
      */
     private void handleSensorDeactivated() {
+        // it won't reach here if in alarm state already
+        // at this point only pending alarm should be set to no alarm
+        // nothing to do if in no alarm already
         if (securityRepository.getAlarmStatus() == AlarmStatus.PENDING_ALARM) {
             setAlarmStatus(AlarmStatus.NO_ALARM);
         }
@@ -120,10 +129,11 @@ public class SecurityService {
      * @param active sensor status to set
      */
     public void changeSensorActivationStatus(Sensor sensor, Boolean active) {
+        // don't change the alarm sate if already in alarm
         if (getAlarmStatus() != AlarmStatus.ALARM) {
-            if (active) {
+            if (!sensor.getActive() && active) {
                 handleSensorActivated();
-            } else if (sensor.getActive()) {
+            } else if (sensor.getActive() && !active) {
                 handleSensorDeactivated();
             }
         }
@@ -137,6 +147,7 @@ public class SecurityService {
      * @param currentCameraImage image to process
      */
     public void processImage(BufferedImage currentCameraImage) {
+        // store the cat boolean to use to find already detected cat when moving to armed home
         cat = imageService.imageContainsCat(currentCameraImage, 50.0f);
         catDetected(cat);
     }
