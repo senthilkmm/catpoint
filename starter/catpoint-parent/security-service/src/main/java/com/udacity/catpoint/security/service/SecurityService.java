@@ -46,6 +46,8 @@ public class SecurityService {
             ConcurrentSkipListSet<Sensor> sensors = new ConcurrentSkipListSet<>(getSensors());
             for (Sensor sensor : sensors)
                 changeSensorActivationStatus(sensor,false);
+            // notify the status listeners of the change in sensor statuses
+            statusListeners.forEach(StatusListener::sensorStatusChanged);
             // set to alarm if armed home and cat found
             if (armingStatus == ArmingStatus.ARMED_HOME && cat)
                 setAlarmStatus(AlarmStatus.ALARM);
